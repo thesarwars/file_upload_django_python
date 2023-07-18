@@ -38,6 +38,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class FileUploadedSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedFile
-        fields = ('file', 'uploader')
+        fields = ('file', 'uploader','shared_with')
         
         

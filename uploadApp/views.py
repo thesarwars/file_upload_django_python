@@ -8,9 +8,13 @@ from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import UploadedFile
+# from django.core.files.uploadedfile import UploadedFile
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework import generics, permissions
+from .models import UploadedFile
+import mimetypes
+
 
 # Create your views here.
 def Home(request):
@@ -101,3 +105,68 @@ class FileUploadView(APIView):
             return Response({'success': True}, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        
+# class DocumentDownloadView(generics.RetrieveAPIView):
+#     queryset = UploadedFile.objects.all()
+#     serializer_class = FileUploadedSerializer
+#     permission_classes = [permissions.IsAuthenticated]  # Requires authentication
+
+#     def retrieve(self, request, *args, **kwargs):
+#         instance = self.get_object()
+        
+#         # Check if the user is the document owner or an admin
+#         if request.user == instance.uploader or request.user.is_staff:
+#             # Perform any additional checks if needed
+            
+#             # Download the file
+#             file = instance.file
+#             response = HttpResponse(file, content_type='application/octet-stream')
+#             response['Content-Disposition'] = f'attachment; filename="{file.name}"'
+#             return response
+        
+#         # Return a 403 Forbidden response if the user is not allowed to download the file
+#         return HttpResponse(status=403)
+
+
+# File download
+class DocumentDownloadView(generics.RetrieveAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = FileUploadedSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if request.user == instance.uploader or request.user.is_staff:
+            file = instance.file
+            file_path = file.path
+            file_name = file.name
+
+            with open(file_path, 'rb') as f:
+                response = HttpResponse(f.read())
+
+            content_type, _ = mimetypes.guess_type(file_name)
+            response['Content-Type'] = content_type
+            response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+            return response
+        return HttpResponse(status=403)
+    
+    
+
+class DocumentShareView(generics.UpdateAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = FileUploadedSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.user == instance.uploader or request.user.is_staff:
+            user_ids = request.data.get('shared_with', [])
+            shared_with_users = User.objects.filter(id__in=user_ids)
+            instance.shared_with.set(shared_with_users)
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        return HttpResponse(status=403)
