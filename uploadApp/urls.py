@@ -11,4 +11,5 @@ urlpatterns = [
     path('documents/<int:pk>/share/', views.DocumentShareView.as_view(), name='document-sahre'),
     path('documents/files/', views.FileListView.as_view(), name='document-list'),
     path('documents/update/<int:pk>/', views.FilesUpdateDelete.as_view(), name='document-list'),
+    path('doc2pdf/', views.ConvertDocToPDFView.as_view(), name='convert_doc_to_pdf'),
 ]

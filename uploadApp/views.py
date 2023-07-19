@@ -14,6 +14,9 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions
 from .models import UploadedFile
 import mimetypes
+import subprocess
+import os
+
 
 
 # Create your views here.
@@ -75,13 +78,12 @@ def user_register_view(request):
 ALLOWED_FILE_FORMATS = ['pdf', 'doc', 'docx']
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
+# Check if the file size & format is allowed
 def validate_file(file: UploadedFile):
-    # Check if the file format is allowed
     file_format = file.name.split('.')[-1].lower()
     if file_format not in ALLOWED_FILE_FORMATS:
         raise ValidationError(f'Invalid file format. Only {", ".join(ALLOWED_FILE_FORMATS)} formats are allowed.')
 
-    # Check the file size
     if file.size > MAX_FILE_SIZE:
         raise ValidationError(f'File size exceeds the limit of {MAX_FILE_SIZE} bytes.')
 
@@ -98,8 +100,12 @@ class FileUploadView(APIView):
             except serializers.ValidationError as e:
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer.validated_data['uploader'] = request.user
+            # uploader = request.user if request.user.is_authenticated else None
+            # uploaded_file = UploadedFile(file=file, uploader=uploader)
+            # uploaded_file.uploader = uploader
+            # uploaded_file.save()
             
+            serializer.validated_data['uploader'] = request.user
             serializer.save()
 
             return Response({'success': True}, status=status.HTTP_200_OK)
@@ -184,3 +190,43 @@ class FileListView(generics.ListAPIView):
 class FilesUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
     queryset = UploadedFile
     serializer_class = FileUploadedSerializer
+    
+
+
+def convert_doc_to_pdf(input_doc_file, output_pdf_file):
+    try:
+        subprocess.run(['unoconv', '--output', output_pdf_file, input_doc_file], check=True)
+        print("Conversion successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"Conversion failed with error: {e}")
+
+class ConvertDocToPDFView(APIView):
+    def post(self, request, format=None):
+        serializer = FileUploadedSerializer(data=request.data)
+
+        if serializer.is_valid():
+            file = serializer.validated_data['file']
+            try:
+                validate_file(file)
+            except serializers.ValidationError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer.validated_data['uploader'] = request.user
+            serializer.save()
+
+            # Save the uploaded .doc file to a temporary location. Note that, this is my devices Location.
+            # If anyone wants to use in their device, update the path with your desired location.
+            input_doc_file_path = "/Users/sarwars/Desktop/Test/file_upload_django_react.js/media/uploads/" + file.name
+            with open(input_doc_file_path, 'wb') as f:
+                for chunk in file.chunks():
+                    f.write(chunk)
+
+            if file.name.endswith('.doc') or file.name.endswith('.docx'):
+                output_pdf_file_path = os.path.splitext(input_doc_file_path)[0] + ".pdf"
+                convert_doc_to_pdf(input_doc_file_path, output_pdf_file_path)
+            else:
+                output_pdf_file_path = input_doc_file_path
+
+            return Response({'success': True}, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
