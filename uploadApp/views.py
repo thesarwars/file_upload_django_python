@@ -179,3 +179,8 @@ class FileListView(generics.ListAPIView):
     serializer_class = FileUploadedSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['file', 'title', 'description', 'uploaded_at']
+    
+# File update, delete    
+class FilesUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
+    queryset = UploadedFile
+    serializer_class = FileUploadedSerializer

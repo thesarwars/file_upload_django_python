@@ -10,4 +10,5 @@ urlpatterns = [
     path('documents/<int:pk>/download/', views.DocumentDownloadView.as_view(), name='document-download'),
     path('documents/<int:pk>/share/', views.DocumentShareView.as_view(), name='document-sahre'),
     path('documents/files/', views.FileListView.as_view(), name='document-list'),
+    path('documents/update/<int:pk>/', views.FilesUpdateDelete.as_view(), name='document-list'),
 ]
