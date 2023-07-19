@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.shortcuts import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status, serializers
+from rest_framework import status, serializers, filters
 from .serializers import UserRegistrationSerializer, FileUploadedSerializer
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
@@ -170,3 +170,12 @@ class DocumentShareView(generics.UpdateAPIView):
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
         return HttpResponse(status=403)
+    
+    
+
+# Search Filter
+class FileListView(generics.ListAPIView):
+    queryset = UploadedFile.objects.all()
+    serializer_class = FileUploadedSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['file', 'title', 'description', 'uploaded_at']
