@@ -21,8 +21,15 @@ How to run the project:
 
 # Screenshot
 
+File uploading API
 ![upload](/media/uploads/upload.png)
 
+User Registration API
 ![registration_API](/media/uploads/reg.png)
 
+File convert doc/docx to PDF
 ![File_Format_Convert](/media/uploads/convert.png)
+
+# API Documentantion
+
+Postman: https://documenter.getpostman.com/view/28624290/2s946icBDh
