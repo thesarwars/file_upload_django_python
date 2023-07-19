@@ -18,12 +18,13 @@ import subprocess
 import os
 
 
-
 # Create your views here.
 def Home(request):
     return HttpResponse('Hello World')
 
 # user login view
+
+
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
@@ -55,37 +56,40 @@ def user_register_view(request):
     if request.method == 'POST':
         serializer = UserRegistrationSerializer(data=request.data)
         data = {}
-        
+
         if serializer.is_valid():
             account = serializer.save()
-            
+
             data['response'] = 'Account has been created'
-            data['username'] = account.username 
+            data['username'] = account.username
             data['email'] = account.email
             data['is_staff'] = account.is_staff
-            data['is_superuser'] = account.is_superuser 
-            
+            data['is_superuser'] = account.is_superuser
+
             token = Token.objects.get(user=account).key
             data['token'] = token
-            
+
         else:
             data = serializer.errors
         return Response(data)
-    
-    
-    
+
+
 # Define the allowed file formats and maximum file size
 ALLOWED_FILE_FORMATS = ['pdf', 'doc', 'docx']
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 # Check if the file size & format is allowed
+
+
 def validate_file(file: UploadedFile):
     file_format = file.name.split('.')[-1].lower()
     if file_format not in ALLOWED_FILE_FORMATS:
-        raise ValidationError(f'Invalid file format. Only {", ".join(ALLOWED_FILE_FORMATS)} formats are allowed.')
+        raise ValidationError(
+            f'Invalid file format. Only {", ".join(ALLOWED_FILE_FORMATS)} formats are allowed.')
 
     if file.size > MAX_FILE_SIZE:
-        raise ValidationError(f'File size exceeds the limit of {MAX_FILE_SIZE} bytes.')
+        raise ValidationError(
+            f'File size exceeds the limit of {MAX_FILE_SIZE} bytes.')
 
 
 # User upload the file and username will be saved
@@ -104,16 +108,15 @@ class FileUploadView(APIView):
             # uploaded_file = UploadedFile(file=file, uploader=uploader)
             # uploaded_file.uploader = uploader
             # uploaded_file.save()
-            
+
             serializer.validated_data['uploader'] = request.user
             serializer.save()
 
             return Response({'success': True}, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        
+
+
 # class DocumentDownloadView(generics.RetrieveAPIView):
 #     queryset = UploadedFile.objects.all()
 #     serializer_class = FileUploadedSerializer
@@ -121,17 +124,17 @@ class FileUploadView(APIView):
 
 #     def retrieve(self, request, *args, **kwargs):
 #         instance = self.get_object()
-        
+
 #         # Check if the user is the document owner or an admin
 #         if request.user == instance.uploader or request.user.is_staff:
 #             # Perform any additional checks if needed
-            
+
 #             # Download the file
 #             file = instance.file
 #             response = HttpResponse(file, content_type='application/octet-stream')
 #             response['Content-Disposition'] = f'attachment; filename="{file.name}"'
 #             return response
-        
+
 #         # Return a 403 Forbidden response if the user is not allowed to download the file
 #         return HttpResponse(status=403)
 
@@ -158,8 +161,7 @@ class DocumentDownloadView(generics.RetrieveAPIView):
             response['Content-Disposition'] = f'attachment; filename="{file_name}"'
             return response
         return HttpResponse(status=403)
-    
-    
+
 
 class DocumentShareView(generics.UpdateAPIView):
     queryset = UploadedFile.objects.all()
@@ -176,8 +178,7 @@ class DocumentShareView(generics.UpdateAPIView):
             serializer = self.get_serializer(instance)
             return Response(serializer.data)
         return HttpResponse(status=403)
-    
-    
+
 
 # Search Filter
 class FileListView(generics.ListAPIView):
@@ -185,21 +186,27 @@ class FileListView(generics.ListAPIView):
     serializer_class = FileUploadedSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['file', 'title', 'description', 'uploaded_at']
-    
-# File update, delete    
+
+# File update, delete
+
+
 class FilesUpdateDelete(generics.RetrieveUpdateDestroyAPIView):
     queryset = UploadedFile
     serializer_class = FileUploadedSerializer
-    
 
 
+# Here i'm using UNOCONV to convert doc2pdf. For that in your environments need Libreoffice.
 def convert_doc_to_pdf(input_doc_file, output_pdf_file):
     try:
-        subprocess.run(['unoconv', '--output', output_pdf_file, input_doc_file], check=True)
+        subprocess.run(['unoconv', '--output', output_pdf_file,
+                       input_doc_file], check=True)
         print("Conversion successful.")
     except subprocess.CalledProcessError as e:
         print(f"Conversion failed with error: {e}")
 
+
+# Note that, this is my devices Location. If anyone wants to use in their device,
+# update the path with your desired location.
 class ConvertDocToPDFView(APIView):
     def post(self, request, format=None):
         serializer = FileUploadedSerializer(data=request.data)
@@ -214,15 +221,14 @@ class ConvertDocToPDFView(APIView):
             serializer.validated_data['uploader'] = request.user
             serializer.save()
 
-            # Save the uploaded .doc file to a temporary location. Note that, this is my devices Location.
-            # If anyone wants to use in their device, update the path with your desired location.
             input_doc_file_path = "/Users/sarwars/Desktop/Test/file_upload_django_react.js/media/uploads/" + file.name
             with open(input_doc_file_path, 'wb') as f:
                 for chunk in file.chunks():
                     f.write(chunk)
 
             if file.name.endswith('.doc') or file.name.endswith('.docx'):
-                output_pdf_file_path = os.path.splitext(input_doc_file_path)[0] + ".pdf"
+                output_pdf_file_path = os.path.splitext(
+                    input_doc_file_path)[0] + ".pdf"
                 convert_doc_to_pdf(input_doc_file_path, output_pdf_file_path)
             else:
                 output_pdf_file_path = input_doc_file_path

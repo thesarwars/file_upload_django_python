@@ -1,4 +1,3 @@
-# file_upload_django_react.js
 # Project Title: Personal Document Management API with Django REST Framework
 
 Objective: To create a RESTful API for a personal document management system
